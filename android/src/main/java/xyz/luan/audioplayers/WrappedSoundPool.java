@@ -176,6 +176,30 @@ public class WrappedSoundPool extends Player {
     }
 
     @Override
+    void setUrlWithHeaders(final Context context, final String url, final boolean isLocal,
+            final HashMap<String, String> headers) {
+        if (this.url != null && this.url.equals(url)) {
+            return;
+        }
+        if (this.soundId != null) {
+            soundPool.unload(this.soundId);
+        } else {
+            soundPool.setOnLoadCompleteListener(this);
+        }
+        this.url = url;
+        this.loading = true;
+
+        final WrappedSoundPool self = this;
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                self.soundId = soundPool.load(getAudioPathWithHeaders(url, isLocal, headers), 1);
+            }
+        }).start();
+    }
+
+    @Override
     void setVolume(double volume) {
         this.volume = (float) volume;
         if (this.playing) {
@@ -255,10 +279,39 @@ public class WrappedSoundPool extends Player {
         return loadTempFileFromNetwork(url).getAbsolutePath();
     }
 
+    private String getAudioPathWithHeaders(String url, boolean isLocal, HashMap<String, String> headers) {
+        if (isLocal) {
+            return url;
+        }
+        return loadTempFileFromNetwork(url, headers).getAbsolutePath();
+    }
+
     private File loadTempFileFromNetwork(String url) {
         FileOutputStream fileOutputStream = null;
         try {
             byte[] bytes = downloadUrl(URI.create(url).toURL());
+            File tempFile = createTempFile("sound", "");
+            fileOutputStream = new FileOutputStream(tempFile);
+            fileOutputStream.write(bytes);
+            tempFile.deleteOnExit();
+            return tempFile;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            try {
+                if (fileOutputStream != null) {
+                    fileOutputStream.close();
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    private File loadTempFileFromNetwork(String url, HashMap<String, String> headers) {
+        FileOutputStream fileOutputStream = null;
+        try {
+            byte[] bytes = downloadUrl(URI.create(url).toURL(), headers);
             File tempFile = createTempFile("sound", "");
             fileOutputStream = new FileOutputStream(tempFile);
             fileOutputStream.write(bytes);
@@ -297,6 +350,38 @@ public class WrappedSoundPool extends Player {
                 stream.close();
             } catch (IOException e) {
                 throw new RuntimeException(e);
+            }
+        }
+
+        return outputStream.toByteArray();
+    }
+
+    private byte[] downloadUrl(URL url, HashMap<String, String> headers) {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        System.out.println("DEBUG ZAMEER TEST 1");
+        InputStream stream = null;
+        HttpsURLConnection urlHeaderConnection;
+        try {
+            urlHeaderConnection = (HttpsURLConnection) url.openConnection();
+            for (HashMap.Entry<String, String> entry : headers.entrySet()) {
+                urlHeaderConnection.setRequestProperty(entry.getKey().toString(), entry.getValue().toString());
+            }
+            byte[] chunk = new byte[4096];
+            int bytesRead;
+            stream = urlHeaderConnection.getInputStream();
+
+            while ((bytesRead = stream.read(chunk)) > 0) {
+                outputStream.write(chunk, 0, bytesRead);
+            }
+        } catch (Exception e) {
+            System.out.println("failed to open connection");
+        } finally {
+            if (stream != null) {
+                try {
+                    stream.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
 

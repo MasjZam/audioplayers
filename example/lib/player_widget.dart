@@ -10,11 +10,13 @@ class PlayerWidget extends StatefulWidget {
   final String url;
   final bool isLocal;
   final PlayerMode mode;
+  final Map<String, String> headers;
 
   PlayerWidget(
       {@required this.url,
       this.isLocal = false,
-      this.mode = PlayerMode.MEDIA_PLAYER});
+      this.mode = PlayerMode.MEDIA_PLAYER,
+      this.headers = null});
 
   @override
   State<StatefulWidget> createState() {
@@ -26,6 +28,7 @@ class _PlayerWidgetState extends State<PlayerWidget> {
   String url;
   bool isLocal;
   PlayerMode mode;
+  Map<String, String> headers;
 
   AudioPlayer _audioPlayer;
   AudioPlayerState _audioPlayerState;
@@ -44,7 +47,7 @@ class _PlayerWidgetState extends State<PlayerWidget> {
   get _durationText => _duration?.toString()?.split('.')?.first ?? '';
   get _positionText => _position?.toString()?.split('.')?.first ?? '';
 
-  _PlayerWidgetState(this.url, this.isLocal, this.mode);
+  _PlayerWidgetState(this.url, this.isLocal, this.mode, this.headers);
 
   @override
   void initState() {
@@ -190,8 +193,15 @@ class _PlayerWidgetState extends State<PlayerWidget> {
             _position.inMilliseconds < _duration.inMilliseconds)
         ? _position
         : null;
-    final result =
-        await _audioPlayer.play(url, isLocal: isLocal, position: playPosition);
+    int result = null;
+    await _audioPlayer.play(url, isLocal: isLocal, position: playPosition);
+    if (headers != null) {
+      result = await _audioPlayer.playWithHeaders(url,
+          isLocal: isLocal, position: playPosition, headers: headers);
+    } else {
+      result = await _audioPlayer.play(url,
+          isLocal: isLocal, position: playPosition);
+    }
     if (result == 1) setState(() => _playerState = PlayerState.playing);
 
     // TODO implemented for iOS, waiting for android impl

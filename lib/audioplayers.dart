@@ -366,6 +366,41 @@ class AudioPlayer {
     return result;
   }
 
+  /// Plays an audio.
+  ///
+  /// If [isLocal] is true, [url] must be a local file system path.
+  /// If [isLocal] is false, [url] must be a remote URL.
+  Future<int> playWithHeaders(
+    String url, {
+    bool isLocal = false,
+    double volume = 1.0,
+    // position must be null by default to be compatible with radio streams
+    Duration position,
+    bool respectSilence = false,
+    bool stayAwake = false,
+    Map<String, String> headers,
+  }) async {
+    isLocal ??= false;
+    volume ??= 1.0;
+    respectSilence ??= false;
+    stayAwake ??= false;
+    final int result = await _invokeMethod('playWithHeaders', {
+      'url': url,
+      'isLocal': isLocal,
+      'volume': volume,
+      'position': position?.inMilliseconds,
+      'respectSilence': respectSilence,
+      'stayAwake': stayAwake,
+      'headers': headers,
+    });
+
+    if (result == 1) {
+      state = AudioPlayerState.PLAYING;
+    }
+
+    return result;
+  }
+
   /// Pauses the audio that is currently playing.
   ///
   /// If you call [resume] later, the audio will resume from the point that it
@@ -487,6 +522,25 @@ class AudioPlayer {
     return _invokeMethod('setUrl',
         {'url': url, 'isLocal': isLocal, 'respectSilence': respectSilence});
   }
+
+  /// Sets the URL with headers.
+  ///
+  /// Unlike [play], the playback will not resume.
+  ///
+  /// The resources will start being fetched or buffered as soon as you call
+  /// this method.
+  Future<int> setUrlWithHeaders(String url,
+      {bool isLocal: false,
+      bool respectSilence = false,
+      Map<String, String> headers}) {
+    return _invokeMethod('setUrlWithHeaders', {
+      'url': url,
+      'isLocal': isLocal,
+      'respectSilence': respectSilence,
+      'headers': headers
+    });
+  }
+
 
   /// Get audio duration after setting url.
   /// Use it in conjunction with setUrl.

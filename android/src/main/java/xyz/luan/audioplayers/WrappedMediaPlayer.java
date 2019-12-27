@@ -57,6 +57,30 @@ public class WrappedMediaPlayer extends Player implements MediaPlayer.OnPrepared
     }
 
     @Override
+    void setUrlWithHeaders(Context context, String url, boolean isLocal, HashMap<String,String> headers) {
+        if (!objectEquals(this.url, url)) {
+            this.url = url;
+            if (this.released) {
+                this.player = createPlayer();
+                this.released = false;
+            } else if (this.prepared) {
+                this.player.reset();
+                this.prepared = false;
+            }
+            Uri uri = Uri.parse(url);
+            //TODO: DOuble check context paramater as this 
+            try{
+                this.player.setDataSource(context, uri, headers);
+            }catch(IOException e){
+                System.out.println("datasource error");
+            }
+            this.player.setVolume((float) volume, (float) volume);
+            this.player.setLooping(this.releaseMode == ReleaseMode.LOOP);
+            this.player.prepareAsync();
+        }
+    }
+
+    @Override
     void setVolume(double volume) {
         if (this.volume != volume) {
             this.volume = volume;

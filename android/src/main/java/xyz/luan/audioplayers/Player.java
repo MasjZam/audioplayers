@@ -19,6 +19,8 @@ abstract class Player {
 
     abstract void setUrl(String url, boolean isLocal);
 
+    abstract void setUrlWithHeaders(Context context, String url, boolean isLocal, HashMap<String,String> headers);
+
     abstract void setVolume(double volume);
 
     abstract void configAttributes(boolean respectSilence, boolean stayAwake, Context context);

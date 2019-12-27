@@ -68,6 +68,23 @@ public class AudioplayersPlugin implements MethodCallHandler {
                 player.play();
                 break;
             }
+            case "playWithHeaders": {
+                final String url = call.argument("url");
+                final double volume = call.argument("volume");
+                final Integer position = call.argument("position");
+                final boolean respectSilence = call.argument("respectSilence");
+                final boolean isLocal = call.argument("isLocal");
+                final boolean stayAwake = call.argument("stayAwake");
+                final Map<String, String> headers = call.argument("headers");
+                player.configAttributes(respectSilence, stayAwake, context.getApplicationContext());
+                player.setVolume(volume);
+                player.setUrlWithHeaders(context.getApplicationContext(), url, isLocal, (HashMap<String, String>) headers);
+                if (position != null && !mode.equals("PlayerMode.LOW_LATENCY")) {
+                    player.seek(position);
+                }
+                    player.play();
+                    break;
+            }
             case "resume": {
                 player.play();
                 break;
@@ -98,6 +115,13 @@ public class AudioplayersPlugin implements MethodCallHandler {
                 final String url = call.argument("url");
                 final boolean isLocal = call.argument("isLocal");
                 player.setUrl(url, isLocal);
+                break;
+            }
+            case "setUrlWithHeaders": {
+                final String url = call.argument("url");
+                final boolean isLocal = call.argument("isLocal");
+                final HashMap<String, String> headers = call.argument("headers");
+                player.setUrlWithHeaders(context, url, isLocal, headers);
                 break;
             }
             case "getDuration": {
