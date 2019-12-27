@@ -155,6 +155,33 @@ float _playbackRate = 1.0;
                     NSLog(@"position: %d %@", milliseconds, call.arguments[@"positions"] );
                     [self play:playerId url:url isLocal:isLocal volume:volume time:time isNotification:respectSilence];
                   },
+                  @"playWithHeaders":
+                    ^{
+                        NSLog(@"playWithHeaders!");
+                        NSString *url = call.arguments[@"url"];
+                        if (url == nil)
+                            result(0);
+                        if (call.arguments[@"isLocal"] == nil)
+                            result(0);
+                        if (call.arguments[@"volume"] == nil)
+                            result(0);
+                        if (call.arguments[@"position"] == nil)
+                            result(0);
+                        if (call.arguments[@"respectSilence"] == nil)
+                            result(0);
+                        if (call.arguments[@"headers"] == nil)
+                            result(0);
+                        int isLocal = [call.arguments[@"isLocal"]intValue] ;
+                        float volume = (float)[call.arguments[@"volume"] doubleValue] ;
+                        int milliseconds = call.arguments[@"position"] == [NSNull null] ? 0.0 : [call.arguments[@"position"] intValue] ;
+                        bool respectSilence = [call.arguments[@"respectSilence"]boolValue] ;
+                        NSDictionary *headers = call.arguments[@"headers"] ;
+                        CMTime time = CMTimeMakeWithSeconds(milliseconds / 1000,NSEC_PER_SEC);
+                        NSLog(@"isLocal: %d %@", isLocal, call.arguments[@"isLocal"] );
+                        NSLog(@"volume: %f %@", volume, call.arguments[@"volume"] );
+                        NSLog(@"position: %d %@", milliseconds, call.arguments[@"positions"] );
+                        [self play:playerId url:url isLocal:isLocal volume:volume time:time isNotification:respectSilence headers:headers];
+                    },
                 @"pause":
                   ^{
                     NSLog(@"pause");
@@ -498,6 +525,34 @@ float _playbackRate = 1.0;
            [ player seekToTime:time ];
            [ player play];
            [ playerInfo setObject:@true forKey:@"isPlaying" ];
+         }    
+  ];
+}
+
+-(void) play: (NSString*) playerId
+         url: (NSString*) url
+     isLocal: (int) isLocal
+      volume: (float) volume
+        time: (CMTime) time
+      isNotification: (bool) respectSilence
+      headers: (NSDictionary*) headers
+{
+  [ self setUrl:url 
+         isLocal:isLocal 
+         isNotification:respectSilence
+         playerId:playerId 
+         onReady:^(NSString * playerId) {
+           NSMutableDictionary * playerInfo = players[playerId];
+           AVPlayer *player = playerInfo[@"player"];
+           [ player setVolume:volume ];
+           [ player seekToTime:time ];
+           [ player play];
+           [ playerInfo setObject:@true forKey:@"isPlaying" ];
+           for (NSString* key in headers) {
+  ];	                  id value = headers[key];
+                  // do stuff
+              }
+              // add a loop here to make a new request for each key in headers and add it to the request somehow. Maybe have to create a addHeader method
          }    
   ];
 }
