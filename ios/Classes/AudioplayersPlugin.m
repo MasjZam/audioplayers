@@ -175,7 +175,7 @@ float _playbackRate = 1.0;
                       float volume = (float)[call.arguments[@"volume"] doubleValue] ;
                       int milliseconds = call.arguments[@"position"] == [NSNull null] ? 0.0 : [call.arguments[@"position"] intValue] ;
                       bool respectSilence = [call.arguments[@"respectSilence"]boolValue] ;
-                      NSDictionary *headers = call.arguments[@"headers"] ;
+                      NSMutableDictionary *headers = call.arguments[@"headers"] ;
                       CMTime time = CMTimeMakeWithSeconds(milliseconds / 1000,NSEC_PER_SEC);
                       NSLog(@"isLocal: %d %@", isLocal, call.arguments[@"isLocal"] );
                       NSLog(@"volume: %f %@", volume, call.arguments[@"volume"] );
@@ -436,6 +436,7 @@ float _playbackRate = 1.0;
   AVPlayerItem *playerItem;
     
   NSLog(@"setUrl %@", url);
+  NSLog(@"Test noHeader");
 
   // code moved from play() to setUrl() to fix the bug of audio not playing in ios background
   NSError *error = nil;
@@ -507,6 +508,98 @@ float _playbackRate = 1.0;
   }
 }
 
+-(void) setUrl: (NSString*) url
+       isLocal: (bool) isLocal
+       isNotification: (bool) respectSilence
+       playerId: (NSString*) playerId
+       headers: (NSMutableDictionary*) headers
+       onReady:(VoidCallback)onReady
+{
+  NSMutableDictionary * playerInfo = players[playerId];
+  AVPlayer *player = playerInfo[@"player"];
+  _currentPlayerId = playerId; // to be used for notifications command center
+  NSMutableSet *observers = playerInfo[@"observers"];
+  AVPlayerItem *playerItem;
+    
+  NSLog(@"setUrl %@", url);
+  NSLog(@"Test Header");
+
+  // code moved from play() to setUrl() to fix the bug of audio not playing in ios background
+  NSError *error = nil;
+  AVAudioSessionCategory category = respectSilence ? AVAudioSessionCategoryAmbient : AVAudioSessionCategoryPlayback;
+    
+  BOOL success = [[AVAudioSession sharedInstance] setCategory:category withOptions:AVAudioSessionCategoryOptionMixWithOthers error:&error];
+    
+  if (!success) {
+    NSLog(@"Error setting speaker: %@", error);
+  }
+  [[AVAudioSession sharedInstance] setActive:YES error:&error];
+  
+
+  if (!playerInfo || ![url isEqualToString:playerInfo[@"url"]]) {
+    if (isLocal) {
+      NSLog(@"Test Header IF isLocal");
+      //playerItem = [ [ AVPlayerItem alloc ] initWithURL:[ NSURL fileURLWithPath:url ]];
+    } else {
+      NSLog(@"Test Header ELSE isLocal");
+      //AVURLAsset * asset = [AVURLAsset URLAssetWithURL:[ NSURL URLWithString:url ] options:@{@"AVURLAssetHTTPHeaderFieldsKey" : headers}];
+      //playerItem
+       //= [AVPlayerItem playerItemWithAsset:asset];
+    }
+    NSLog(@"Test Header LINE 549");
+      
+    if (playerInfo[@"url"]) {
+      [[player currentItem] removeObserver:self forKeyPath:@"player.currentItem.status" ];
+
+      [ playerInfo setObject:url forKey:@"url" ];
+
+      for (id ob in observers) {
+         [ [ NSNotificationCenter defaultCenter ] removeObserver:ob ];
+      }
+      [ observers removeAllObjects ];
+      [ player replaceCurrentItemWithPlayerItem: playerItem ];
+    } else {
+      player = [[ AVPlayer alloc ] initWithPlayerItem: playerItem ];
+      observers = [[NSMutableSet alloc] init];
+
+      [ playerInfo setObject:player forKey:@"player" ];
+      [ playerInfo setObject:url forKey:@"url" ];
+      [ playerInfo setObject:observers forKey:@"observers" ];
+
+      // playerInfo = [@{@"player": player, @"url": url, @"isPlaying": @false, @"observers": observers, @"volume": @(1.0), @"looping": @(false)} mutableCopy];
+      // players[playerId] = playerInfo;
+
+      // stream player position
+      CMTime interval = CMTimeMakeWithSeconds(0.2, NSEC_PER_SEC);
+      id timeObserver = [ player  addPeriodicTimeObserverForInterval: interval queue: nil usingBlock:^(CMTime time){
+        [self onTimeInterval:playerId time:time];
+      }];
+        [timeobservers addObject:@{@"player":player, @"observer":timeObserver}];
+    }
+      
+    id anobserver = [[ NSNotificationCenter defaultCenter ] addObserverForName: AVPlayerItemDidPlayToEndTimeNotification
+                                                                        object: playerItem
+                                                                         queue: nil
+                                                                    usingBlock:^(NSNotification* note){
+                                                                        [self onSoundComplete:playerId];
+                                                                    }];
+    [observers addObject:anobserver];
+      
+    // is sound ready
+    [playerInfo setObject:onReady forKey:@"onReady"];
+    [playerItem addObserver:self
+                          forKeyPath:@"player.currentItem.status"
+                          options:0
+                          context:(void*)playerId];
+      
+  } else {
+    if ([[player currentItem] status ] == AVPlayerItemStatusReadyToPlay) {
+      NSLog(@"Test Header ELSE");
+      //onReady(playerId);
+    }
+  }
+}
+
 -(void) play: (NSString*) playerId
          url: (NSString*) url
      isLocal: (int) isLocal
@@ -514,6 +607,7 @@ float _playbackRate = 1.0;
         time: (CMTime) time
       isNotification: (bool) respectSilence
 {
+  NSLog(@"Line 605 NoHeaders");
   [ self setUrl:url 
          isLocal:isLocal 
          isNotification:respectSilence
@@ -523,7 +617,7 @@ float _playbackRate = 1.0;
            AVPlayer *player = playerInfo[@"player"];
            [ player setVolume:volume ];
            [ player seekToTime:time ];
-           [ player play];
+           //[ player play];
            [ playerInfo setObject:@true forKey:@"isPlaying" ];
          }    
   ];
@@ -535,24 +629,26 @@ float _playbackRate = 1.0;
       volume: (float) volume
         time: (CMTime) time
 isNotification: (bool) respectSilence
-     headers: (NSDictionary*) headers
+     headers: (NSMutableDictionary*) headers
      {
+       NSLog(@"Line 628 Headers");
   [ self setUrl:url 
          isLocal:isLocal 
-         isNotification:respectSilence
+         isNotification:respectSilence 
          playerId:playerId 
+         headers:headers
          onReady:^(NSString * playerId) {
-           NSMutableDictionary * playerInfo = players[playerId];
-           AVPlayer *player = playerInfo[@"player"];
-           [ player setVolume:volume ];
-           [ player seekToTime:time ];
-           [ player play];
-           [ playerInfo setObject:@true forKey:@"isPlaying" ];
-           for (NSString* key in headers) {
-               id value = headers[key];
-                  // do stuff
-            }
-              // add a loop here to make a new request for each key in headers and add it to the request somehow. Maybe have to create a addHeader method
+           // I updated this to replace the playerItem becuase that's how I can add HTTP headers, but not sure if this
+           // might end up replacing something that it shouldn't. Don't understand what the current value of playerInfo[@"player"] is
+           NSMutableDictionary * playerInfo = players[playerId]; 
+           AVPlayer *player = playerInfo[@"player"];  
+           //AVURLAsset * asset = [AVURLAsset URLAssetWithURL:url options:@{@"AVURLAssetHTTPHeaderFieldsKey" : headers}];
+           //AVPlayerItem * item = [AVPlayerItem playerItemWithAsset:asset];
+           //[ player replaceCurrentItemWithPlayerItem:item ];
+           [ player setVolume:volume ]; 
+           [ player seekToTime:time ]; 
+           //[ player play]; 
+           [ playerInfo setObject:@true forKey:@"isPlaying" ]; 
          }    
   ];
 }

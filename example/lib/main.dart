@@ -16,6 +16,9 @@ const kUrl1 = 'https://luan.xyz/files/audio/ambient_c_motion.mp3';
 const kUrl2 = 'https://luan.xyz/files/audio/nasa_on_a_mission.mp3';
 const kUrl3 = 'http://bbcmedia.ic.llnwd.net/stream/bbcmedia_radio1xtra_mf_p';
 
+const kUrlRogan = 'http://traffic.libsyn.com/joeroganexp/p1427.mp3';
+Map<String, String> kHeadersRogan = {"range": "500000-600000"};
+
 void main() {
   runApp(new MaterialApp(home: new ExampleApp()));
 }
@@ -64,10 +67,10 @@ class _ExampleAppState extends State<ExampleApp> {
         ),
         PlayerWidget(url: kUrl1),
         Text(
-          'Sample 2 ($kUrl2)',
+          'Sample 2 ($kUrlRogan)',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        PlayerWidget(url: kUrl2),
+        PlayerWidget(url: kUrlRogan, headers: kHeadersRogan),
         Text(
           'Sample 3 ($kUrl3)',
           style: TextStyle(fontWeight: FontWeight.bold),

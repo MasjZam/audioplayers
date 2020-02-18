@@ -20,7 +20,7 @@ class PlayerWidget extends StatefulWidget {
 
   @override
   State<StatefulWidget> createState() {
-    return _PlayerWidgetState(url, isLocal, mode);
+    return _PlayerWidgetState(url, isLocal, mode, headers);
   }
 }
 
